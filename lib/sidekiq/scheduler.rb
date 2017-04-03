@@ -92,8 +92,9 @@ module Sidekiq
           interval_types = %w{cron every at in interval}
           interval_types.each do |interval_type|
             config_interval_type = config[interval_type]
-
+            logger.info "Scheduling trying #{interval_type} #{name} #{config}"
             if !config_interval_type.nil? && config_interval_type.length > 0
+              logger.info "Scheduling using #{interval_type} #{name} #{config}"
 
               schedule, options = SidekiqScheduler::RufusUtils.normalize_schedule_options(config_interval_type)
 
@@ -128,7 +129,7 @@ module Sidekiq
 
           remove_elder_job_instances(job_name)
         else
-          logger.debug { "Ignoring #{job_name} job as it has been already enqueued" }
+          logger.info { "Ignoring #{job_name} job as it has been already enqueued" }
         end
       end
 
@@ -216,7 +217,7 @@ module Sidekiq
 
       def unschedule_job(name)
         if scheduled_jobs[name]
-          logger.debug "Removing schedule #{name}"
+          logger.info "Removing schedule #{name}"
           scheduled_jobs[name].unschedule
           scheduled_jobs.delete(name)
         end
@@ -357,8 +358,9 @@ module Sidekiq
 
       def new_job(name, interval_type, config, schedule, options)
         options = options.merge({ :job => true, :tags => [name] })
-
+        logger.info "Rufusing #{config['class']} (#{schedule}: #{options})"
         rufus_scheduler.send(interval_type, schedule, options) do |job, time|
+          logger.info "Triggered #{config['class']} (#{time})"
           idempotent_job_enqueue(name, time, sanitize_job_config(config)) if job_enabled?(name)
         end
       end
